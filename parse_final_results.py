@@ -2,6 +2,7 @@ import json
 import os
 import matplotlib.pyplot as plt
 import numpy as np
+import pylab
 from collections import defaultdict
 
 from utils import QType
@@ -69,18 +70,16 @@ def save_plot_to_file(x_vals, mega_results_dict, mu_baseline, std_baseline, mu_o
             curr_name = plot_name % (metric + '_' + key[qtype])
             print('Saving %s...' % curr_name)
             fig.savefig(os.path.join(plots_dir, curr_name + '.png'), bbox_inches="tight", format='png')
-
-    import pylab
-    fig = pylab.figure()
-    figlegend = pylab.figure(figsize=(17, 1))
-    ax = fig.add_subplot(111)
-    figlegend.legend(handles, labels, fontsize=fontsize, loc='center', fancybox=True,
-                     shadow=True, ncol=7)
-    figlegend.savefig(os.path.join(plots_dir, 'legend.png'), bbox_inches="tight", format='png')
+            fig = pylab.figure()
+            figlegend = pylab.figure(figsize=(17, 1))
+            ax = fig.add_subplot(111)
+            figlegend.legend(handles, labels, fontsize=fontsize, loc='center', fancybox=True,
+                             shadow=True, ncol=7)
+            figlegend.savefig(os.path.join(plots_dir, curr_name + '_legend.png'), bbox_inches="tight", format='png')
 
 
 def make_plot(x_vals, mega_results_dict, mu_baseline, std_baseline, mu_offline, std_offline, metric, include_std=True,
-              include_full=True, include_pt=True):
+              include_full=True, include_pt=True, show_plots=False):
     fig, ((ax1, ax2, ax3), (ax4, ax5, ax6)) = plt.subplots(2, 3, figsize=(16, 9))  # (7, 4.8)
     l = [ax1, ax2, ax3, ax4, ax5, ax6]
     qtypes = [1, 3, 5, 0, 2, 4]
@@ -120,7 +119,7 @@ def make_plot(x_vals, mega_results_dict, mu_baseline, std_baseline, mu_offline, 
 
         if include_full:
             v_mu = np.ones_like(x) * mu_offline[qtype]
-            print('\nOffline ', key[qtype], v_mu)
+            # print('\nOffline ', key[qtype], v_mu)
             v_stdev = np.ones_like(x) * std_offline[qtype]
             ax.plot(x, v_mu, color=baseline_colors[-1], linestyle='dashed', linewidth=2, markersize=7, label='Full')
             if include_std:
@@ -143,7 +142,12 @@ def make_plot(x_vals, mega_results_dict, mu_baseline, std_baseline, mu_offline, 
                shadow=True, bbox_to_anchor=[0.55, -0.001])
     plt.tight_layout()
     fig.subplots_adjust(bottom=0.15)
-    plt.show()
+    if show_plots:
+        plt.show()
+
+    print('\nMetric: ', metric)
+    for k, v in summary_results.items():
+        print('\n', k + ' & %0.3f & %0.3f & %0.3f & %0.3f & %0.3f' % (v[0], v[1], v[2], v[3], v[4]))
 
 
 def compute_summary_statistic(offline, active_learner_performance):
@@ -340,12 +344,11 @@ def get_all_results(save_dir, plots_dir, seeds, num_questions, permutations, tot
     # plotting
 
     x_vals = [str(s) for s in range(1, num_increments + 1)]
-    if show_plots:
-        make_plot(x_vals, mega_auroc_dict, mu_auroc_pt, std_auroc_pt, mu_auroc_base, std_auroc_base, 'AUROC',
-                  include_std=include_std, include_full=include_full, include_pt=include_pt)
-        make_plot(x_vals, mega_map_dict, mu_map_pt, std_map_pt, mu_map_base, std_map_base, 'mAP',
-                  include_std=include_std,
-                  include_full=include_full, include_pt=include_pt)
+    make_plot(x_vals, mega_auroc_dict, mu_auroc_pt, std_auroc_pt, mu_auroc_base, std_auroc_base, 'AUROC',
+              include_std=include_std, include_full=include_full, include_pt=include_pt, show_plots=show_plots)
+    make_plot(x_vals, mega_map_dict, mu_map_pt, std_map_pt, mu_map_base, std_map_base, 'mAP',
+              include_std=include_std,
+              include_full=include_full, include_pt=include_pt, show_plots=show_plots)
 
     if save_plots:
         save_plot_to_file(x_vals, mega_auroc_dict, mu_auroc_pt, std_auroc_pt, mu_auroc_base, std_auroc_base, 'AUROC',
@@ -448,6 +451,7 @@ def main():
 
     # get/plot results on full test set and tail test set for each experiment
     for test_data in ['full', 'tail']:
+        print('\nTest Data: ', test_data)
 
         # exclude upper bounds from tail plots for clarity
         if test_data == 'tail':
@@ -459,6 +463,7 @@ def main():
         baseline_file_name = test_data + '_results_increment_%d.json'
 
         # plot re-balanced mini-batch results (with bias correction)
+        print('\nRe-balanced with bias correction')
         methods, method_names, plot_name, al_first_name, al_second_name, file_name_al = plot_rebalanced_mb_with_bias_correction(
             test_data, num_samples, head_samples)
         auroc_dict_rebal_bc, map_dict_rebal_bc = get_all_results(save_dir, plots_dir, seeds, num_questions,
@@ -472,6 +477,7 @@ def main():
                                                                  exclude_spop_spaa_upper_bound=exclude_spop_spaa_upper_bound)
 
         # plot re-balanced mini-batch results (without bias correction)
+        print('\nRe-balanced without bias correction')
         methods, method_names, plot_name, al_first_name, al_second_name, file_name_al = plot_rebalanced_mb_without_bias_correction(
             test_data, num_samples, head_samples)
         auroc_dict_rebal_no_bc, map_dict_rebal_no_bc = get_all_results(save_dir, plots_dir, seeds, num_questions,
@@ -485,6 +491,7 @@ def main():
                                                                        exclude_spop_spaa_upper_bound=exclude_spop_spaa_upper_bound)
 
         # plot tail only results for all methods
+        print('\nTail Only Results')
         methods, method_names, plot_name, al_first_name, al_second_name, file_name_al = plot_al_tail_only(
             test_data, num_samples, head_samples)
         auroc_dict_tail_data_only, map_dict_tail_data_only = get_all_results(save_dir, plots_dir, seeds, num_questions,
@@ -500,6 +507,7 @@ def main():
                                                                              exclude_spop_spaa_upper_bound=exclude_spop_spaa_upper_bound)
 
         # plot tail method comparisons
+        print('\nTail Comparisons')
         methods, method_names, plot_name, al_first_name, al_second_name, file_name_al = plot_tail_method_comparisons(
             test_data, num_samples, head_samples)
         auroc_dict_tail_comparisons, map_dict_tail_comparisons = get_all_results(save_dir, plots_dir, seeds,
@@ -518,6 +526,7 @@ def main():
                                                                                  exclude_spop_spaa_upper_bound=exclude_spop_spaa_upper_bound)
 
         # plot standard mini-batch results
+        print('\nStandard Mini-Batches')
         methods, method_names, plot_name, al_first_name, al_second_name, file_name_al = plot_standard_mb(
             test_data, num_samples, head_samples)
         auroc_dict_standard, map_dict_standard = get_all_results(save_dir, plots_dir, seeds, num_questions,
