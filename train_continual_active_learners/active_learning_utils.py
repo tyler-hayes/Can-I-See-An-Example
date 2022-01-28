@@ -81,6 +81,8 @@ def get_active_learning_model_scores(args, method, model, data_loader, device):
     values_dict = {}
     qtype_dict = {}
     orig_index_dict = {}
+    class_ix_dict = {}
+    class_uncertainty_scores_dict = {}
 
     # compute embeddings for all one-hot combinations of predicates and attributes
     pred_batch = torch.arange(args.num_predicate_categories).to(device)
@@ -109,10 +111,11 @@ def get_active_learning_model_scores(args, method, model, data_loader, device):
         predicate_labels = predicate_labels.to(device)
         attr_labels = attr_labels.to(device)
 
-        if method in ['random', 'tail']:
+        if method in ['random', 'tail', 'tail_uniform_class', 'tail_count_proba']:
             # don't need network outputs, so just compute active learning scores directly
             compute_active_learning_raw_scores(args, model, method, ques_target, predicate_labels, attr_labels,
-                                               values_dict, qtype_dict, orig_index_dict, indices, original_indices,
+                                               values_dict, qtype_dict, orig_index_dict, class_ix_dict,
+                                               class_uncertainty_scores_dict, indices, original_indices,
                                                predicate_probas, attribute_probas, device)
 
         else:
@@ -127,16 +130,16 @@ def get_active_learning_model_scores(args, method, model, data_loader, device):
                                                    curr_batch_box_features, predicate_labels, attr_labels,
                                                    predicate_embeddings, attr_embeddings,
                                                    box_feature_ids_to_subject_box_ids, values_dict, qtype_dict,
-                                                   orig_index_dict, indices, original_indices, predicate_probas,
-                                                   attribute_probas, device)
+                                                   orig_index_dict, class_ix_dict, indices, original_indices,
+                                                   predicate_probas, attribute_probas, device)
 
-    return values_dict, qtype_dict, orig_index_dict
+    return values_dict, qtype_dict, orig_index_dict, class_ix_dict, class_uncertainty_scores_dict
 
 
 def compute_active_learning_network_scores(args, method, ques_triples, ques_target, predicted_features,
                                            curr_batch_box_features, predicate_batch, attribute_batch,
                                            predicate_embeddings, attr_embeddings, box_feature_ids_to_subject_box_ids,
-                                           values_dict, qtype_dict, orig_index_dict, index, orig_index,
+                                           values_dict, qtype_dict, orig_index_dict, class_ix_dict, index, orig_index,
                                            predicate_probas, attribute_probas, device):
     # whether a small probability is "best" for active selection
     if method in ['confidence', 'margin', 'confidence_no_head', 'margin_no_head']:
@@ -171,6 +174,11 @@ def compute_active_learning_network_scores(args, method, ques_triples, ques_targ
                 value = get_al_value_from_proba_vector(probas, method, device, eps=1e-12)
                 value = value.cpu().item()
 
+                if q_type == QType.spos:
+                    curr_cls = 'p_' + str(curr_predicates[j].item())
+                elif q_type == QType.spas:
+                    curr_cls = 'a_' + str(curr_attributes[j].item())
+
                 if 'no_head' in method and q_type == QType.spos:
                     curr_pred = curr_predicates[j]
                     if predicate_probas[curr_pred.item()] == args.tail_head_probability:
@@ -191,6 +199,7 @@ def compute_active_learning_network_scores(args, method, ques_triples, ques_targ
                 values_dict[curr_qid[j]] = value
                 qtype_dict[curr_qid[j]] = q_type
                 orig_index_dict[curr_qid[j]] = curr_orig_id[j]
+                class_ix_dict[curr_qid[j]] = curr_cls
 
         elif q_type == QType.spoo:
             # answer is a box
@@ -206,6 +215,8 @@ def compute_active_learning_network_scores(args, method, ques_triples, ques_targ
                 value = get_al_value_from_proba_vector(probas, method, device, eps=1e-12)
                 value = value.cpu().item()
 
+                curr_cls = 'p_' + str(curr_predicates[j].item())
+
                 if 'no_head' in method:
                     curr_pred = curr_predicates[j]
                     if predicate_probas[curr_pred.item()] == args.tail_head_probability:
@@ -218,6 +229,7 @@ def compute_active_learning_network_scores(args, method, ques_triples, ques_targ
                 values_dict[curr_qid[j]] = value
                 qtype_dict[curr_qid[j]] = q_type
                 orig_index_dict[curr_qid[j]] = curr_orig_id[j]
+                class_ix_dict[curr_qid[j]] = curr_cls
 
         elif q_type == QType.spop or q_type == QType.spap:
             # answer is a predicate
@@ -228,6 +240,11 @@ def compute_active_learning_network_scores(args, method, ques_triples, ques_targ
                 probas = dist.unsqueeze(0)
                 value = get_al_value_from_proba_vector(probas, method, device, eps=1e-12)
                 value = value.cpu().item()
+
+                if q_type == QType.spop:
+                    curr_cls = 'p_' + str(curr_predicates[j].item())
+                elif q_type == QType.spap:
+                    curr_cls = 'a_' + str(curr_attributes[j].item())
 
                 if 'no_head' in method and q_type == QType.spop:
                     curr_pred = curr_predicates[j]
@@ -249,6 +266,7 @@ def compute_active_learning_network_scores(args, method, ques_triples, ques_targ
                 values_dict[curr_qid[j]] = value
                 qtype_dict[curr_qid[j]] = q_type
                 orig_index_dict[curr_qid[j]] = curr_orig_id[j]
+                class_ix_dict[curr_qid[j]] = curr_cls
 
         elif q_type == QType.spaa:
             # answer is an attribute
@@ -259,6 +277,7 @@ def compute_active_learning_network_scores(args, method, ques_triples, ques_targ
                 probas = dist.unsqueeze(0)
                 value = get_al_value_from_proba_vector(probas, method, device, eps=1e-12)
                 value = value.cpu().item()
+                curr_cls = 'a_' + str(curr_attributes[j].item())
 
                 if 'no_head' in method:
                     curr_attr = curr_attributes[j]
@@ -272,14 +291,15 @@ def compute_active_learning_network_scores(args, method, ques_triples, ques_targ
                 values_dict[curr_qid[j]] = value
                 qtype_dict[curr_qid[j]] = q_type
                 orig_index_dict[curr_qid[j]] = curr_orig_id[j]
+                class_ix_dict[curr_qid[j]] = curr_cls
 
         else:
             raise NotImplementedError
 
 
 def compute_active_learning_raw_scores(args, model, method, ques_target, predicate_batch, attribute_batch,
-                                       values_dict, qtype_dict, orig_index_dict, index, orig_index, predicate_probas,
-                                       attribute_probas, device):
+                                       values_dict, qtype_dict, orig_index_dict, class_ix_dict, class_uncertainty_dict,
+                                       index, orig_index, predicate_probas, attribute_probas, device):
     for q_type in QType:
         q_ix = np.where(ques_target[:, 0] == q_type)[0]
         if len(q_ix) == 0:
@@ -295,6 +315,7 @@ def compute_active_learning_raw_scores(args, model, method, ques_target, predica
 
             for j in range(len(curr_target)):
                 curr_pred = curr_predicates[j]
+                curr_cls = 'p_' + str(curr_pred.item())
 
                 if 'tail' in method:
                     if args.tail_seen_distribution:
@@ -309,11 +330,14 @@ def compute_active_learning_raw_scores(args, model, method, ques_target, predica
                 values_dict[curr_qid[j]] = value
                 qtype_dict[curr_qid[j]] = q_type
                 orig_index_dict[curr_qid[j]] = curr_orig_id[j]
+                class_ix_dict[curr_qid[j]] = curr_cls
+                class_uncertainty_dict[curr_cls] = value  # value is assigned to a class
 
         elif q_type == QType.spas or q_type == QType.spap or q_type == QType.spaa:
 
             for j in range(len(curr_target)):
                 curr_attr = curr_attributes[j]
+                curr_cls = 'a_' + str(curr_attr.item())
 
                 if 'tail' in method:
                     if args.tail_seen_distribution:
@@ -328,6 +352,8 @@ def compute_active_learning_raw_scores(args, model, method, ques_target, predica
                 values_dict[curr_qid[j]] = value
                 qtype_dict[curr_qid[j]] = q_type
                 orig_index_dict[curr_qid[j]] = curr_orig_id[j]
+                class_ix_dict[curr_qid[j]] = curr_cls
+                class_uncertainty_dict[curr_cls] = value  # value is assigned to a class
 
         else:
             raise NotImplementedError
@@ -348,57 +374,106 @@ def make_dictionary_of_tail_probabilities(args, head_class_ix, tail_class_ix):
     return attributes, predicates
 
 
-def perform_active_sampling(sampling_type, value_dict, qtype_dict, orig_index_dict, al_method, num_samples,
-                            num_questions=6):
+def perform_active_sampling(sampling_type, value_dict, qtype_dict, orig_index_dict, class_ix_dict,
+                            class_uncertainty_scores_dict, al_method, num_samples, num_questions=6):
     values = np.array(list(value_dict.values()))
     keys = np.array(list(value_dict.keys()))
     orig_indices = np.array(list(orig_index_dict.values()))
     min_val = al_method in ['confidence', 'margin', 'confidence_no_head', 'margin_no_head']
-    if sampling_type == 'probabilistic':
-        # use active learning scores as probabilities for choosing samples
-        chosen_ixs = weighted_choice(values, np.arange(len(value_dict)), num_samples, min_val)
-    elif sampling_type == 'rank' and al_method != 'random':
-        # use raw active learning scores to choose samples
-        if min_val:
-            # desire smallest values
-            chosen_ixs = np.argpartition(values, num_samples)[:num_samples]
-        else:
-            # desire largest values
-            chosen_ixs = np.argpartition(values, -num_samples)[-num_samples:]
-    elif 'balanced' in sampling_type:
-        if 'no_head' in al_method:
-            shift = False
-        else:
-            shift = True
-        chosen_ixs = []
-        sizes = compute_split_sizes(num_samples, num_questions)
-        q_list = np.array(list(qtype_dict.values()))
-        for i, s in enumerate(sizes):
-            ix = np.where(q_list == i)[0]
-            curr_vals = values[ix]
-            if 'rank' in sampling_type:
-                # shuffle so that all samples from same class aren't next to each other
-                arr_ixs = np.arange(len(ix))
-                np.random.shuffle(arr_ixs)
-                ix = ix[arr_ixs]
-                curr_vals = curr_vals[arr_ixs]
-                if min_val:
-                    # desire smallest values
-                    chosen_ixs += list(ix[np.argpartition(curr_vals, s)[:s]])
-                else:
-                    # desire largest values
-                    chosen_ixs += list(ix[np.argpartition(curr_vals, -s)[-s:]])
-            else:
-                chosen_ixs += list(weighted_choice(curr_vals, ix, s, min_val=min_val, shift_min=shift))
-        chosen_ixs = np.array(chosen_ixs)
+    if al_method in ['tail_uniform_class', 'tail_count_proba']:
+        # assumes balanced selection among question types with probabilistic random sampling
+        chosen_ixs = active_sampling_over_classes(class_ix_dict, class_uncertainty_scores_dict, qtype_dict, num_samples,
+                                                  num_questions)
     else:
-        raise NotImplementedError
+        if sampling_type == 'probabilistic':
+            # use active learning scores as probabilities for choosing samples
+            chosen_ixs = weighted_choice(values, np.arange(len(value_dict)), num_samples, min_val)
+        elif sampling_type == 'rank' and al_method != 'random':
+            # use raw active learning scores to choose samples
+            if min_val:
+                # desire smallest values
+                chosen_ixs = np.argpartition(values, num_samples)[:num_samples]
+            else:
+                # desire largest values
+                chosen_ixs = np.argpartition(values, -num_samples)[-num_samples:]
+        elif 'balanced' in sampling_type:
+            if 'no_head' in al_method:
+                shift = False
+            else:
+                shift = True
+            chosen_ixs = []
+            sizes = compute_split_sizes(num_samples, num_questions)
+            q_list = np.array(list(qtype_dict.values()))
+            for i, s in enumerate(sizes):
+                ix = np.where(q_list == i)[0]
+                curr_vals = values[ix]
+                if 'rank' in sampling_type:
+                    # shuffle so that all samples from same class aren't next to each other
+                    arr_ixs = np.arange(len(ix))
+                    np.random.shuffle(arr_ixs)
+                    ix = ix[arr_ixs]
+                    curr_vals = curr_vals[arr_ixs]
+                    if min_val:
+                        # desire smallest values
+                        chosen_ixs += list(ix[np.argpartition(curr_vals, s)[:s]])
+                    else:
+                        # desire largest values
+                        chosen_ixs += list(ix[np.argpartition(curr_vals, -s)[-s:]])
+                else:
+                    chosen_ixs += list(weighted_choice(curr_vals, ix, s, min_val=min_val, shift_min=shift))
+            chosen_ixs = np.array(chosen_ixs)
+        else:
+            raise NotImplementedError
 
     assert len(chosen_ixs) == num_samples
 
     keys = keys[chosen_ixs]
     orig_indices = orig_indices[chosen_ixs]
     return keys, orig_indices
+
+
+def active_sampling_over_classes(class_ix_dict, class_uncertainty_scores_dict, qtype_dict, num_samples, num_questions):
+    print('\nSelecting samples in class-wise fashion...')
+    chosen_ixs = []
+    sizes = compute_split_sizes(num_samples, num_questions)
+    q_list = np.array(list(qtype_dict.values()))
+    class_ixs = np.array(list(class_ix_dict.values()))
+    for i, s in enumerate(sizes):
+        curr_chosen = 0
+        ix = np.where(q_list == i)[0]
+        curr_cls = class_ixs[ix]  # get classes represented in current qtype
+        unique_curr_cls = np.unique(curr_cls)
+
+        # make list of class scores to match unique class order
+        cls_scores = []
+        for cls in unique_curr_cls:
+            cls_scores.append(class_uncertainty_scores_dict[cls])
+
+        # remove anything with 0 probability
+        cls_score_bool = np.array(cls_scores, dtype=np.bool)
+        unique_curr_cls = unique_curr_cls[cls_score_bool]
+        cls_scores = np.array(cls_scores)[cls_score_bool]
+
+        # select number of samples per class based on probabilities
+        selected_classes = np.random.choice(unique_curr_cls, size=s, replace=True, p=cls_scores / sum(cls_scores))
+        unique_cls, counts = np.unique(selected_classes, return_counts=True)
+
+        # iterate over classes and select samples
+        for cls, count in zip(unique_cls, counts):
+            # select samples from the class at random
+            curr_ix = np.where(curr_cls == cls)[0]
+            select = np.random.choice(curr_ix, min(count, len(curr_ix)), replace=False)
+            chosen_ixs.extend(list(ix[select]))  # get index with respect to large list
+            curr_chosen += len(select)
+
+        if curr_chosen != s:
+            # not enough samples, so let's add some
+            num_needed = s - curr_chosen
+            chosen_ixs.extend(list(np.random.choice(ix, num_needed,
+                                                    replace=False)))  # should only be for really tiny classes, so let's just randomly grab some
+
+    chosen_ixs = np.array(chosen_ixs).flatten()
+    return chosen_ixs
 
 
 def choose_active_learning_samples(args, model, al_method, unlabeled_loader, device):
@@ -409,10 +484,11 @@ def choose_active_learning_samples(args, model, al_method, unlabeled_loader, dev
                                      args.num_active_learning_samples, True)
         orig_chosen_ixs = np.array(())  # TODO: populate this
     else:
-        values_dict, qtype_dict, orig_index_dict = get_active_learning_model_scores(args, al_method, model,
-                                                                                    unlabeled_loader, device)
+        values_dict, qtype_dict, orig_index_dict, class_ix_dict, class_uncertainty_scores_dict = get_active_learning_model_scores(
+            args, al_method, model, unlabeled_loader, device)
         chosen_ixs, orig_chosen_ixs = perform_active_sampling(args.sampling_type, values_dict, qtype_dict,
-                                                              orig_index_dict, al_method,
+                                                              orig_index_dict, class_ix_dict,
+                                                              class_uncertainty_scores_dict, al_method,
                                                               args.num_active_learning_samples)
 
     unlabel_ixs = np.setdiff1d(np.arange(len(unlabeled_loader.dataset)), chosen_ixs)

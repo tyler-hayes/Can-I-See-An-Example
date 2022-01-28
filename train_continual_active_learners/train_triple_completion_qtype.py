@@ -91,7 +91,8 @@ def get_args_parser(add_help=False):
     # active learning parameters
     parser.add_argument('--active_learning_method', default=None, type=str,
                         choices=[None, 'random', 'confidence', 'entropy', 'margin', 'tail',
-                                 'confidence_no_head', 'margin_no_head', 'entropy_no_head'])
+                                 'confidence_no_head', 'margin_no_head', 'entropy_no_head', 'tail_uniform_class',
+                                 'tail_count_proba'])
     parser.add_argument('--num_active_learning_samples', type=int, default=600)
     parser.add_argument('--sampling_type', type=str, default='balanced_probabilistic',
                         choices=['probabilistic', 'rank', 'balanced', 'balanced_probabilistic', 'balanced_rank'])
