@@ -1,25 +1,23 @@
 Can I see an Example? Active Learning the Long Tail of Attributes and Relations
 =====================================
-This is PyTorch code for our paper available on [arXiv](https://arxiv.org/abs/).
+This is PyTorch code for our BMVC-2022 paper available on [arXiv](https://arxiv.org/abs/).
 
 **Abstract:** There has been significant progress in creating machine learning models that identify objects in scenes
-along with their associated attributes and relationships; however, there is an enormous gap between the best models and
+along with their associated attributes and relationships; however, there is a large gap between the best models and
 human capabilities. One of the major reasons for this gap is the difficulty in collecting sufficient amounts of
 annotated relations and attributes for training these systems. While some attributes and relations are abundant, the
-distribution in existing datasets is long tailed. In this paper, we propose to address this problem by introducing an
-incremental active learning framework for attributes and relations in scenes, where the agent can ask for examples from
-specific categories. Using the newly labeled examples, our method fine-tunes a classifier that predicts missing objects,
-attributes, and relations. Our method then uses the updated model to determine which labels to ask for next. We propose
-a novel active learning strategy that outperforms classical methods on Visual Genome. Our work leads us to suggest
-future strategies for human-in-the-loop data collection.
+distribution in the natural world and existing datasets is long tailed. In this paper, we address this problem by
+introducing a novel incremental active learning framework that asks for attributes and relations in visual scenes. While
+conventional active learning methods ask for labels of specific examples, we flip this framing to allow agents to ask
+for examples from specific categories. Using this framing, we introduce an active sampling method that asks for examples
+from the tail of the data distribution and show that it outperforms classical active learning methods on Visual Genome.
 
 ![Img1](./images/ask_question_scene_graph.png)
 
-In traditional active learning, an agent typically selects _examples_ that it is most uncertain about from an unlabeled
-dataset to be labeled by an oracle. We argue that this setup is limited, especially in long-tailed data regimes.
-Instead, we allow agents to ask for examples at the _category_ level instead of the example level. Here, we train agents
-to predict attributes and relations in scene graphs. In this figure, the agent asks for an example of a rare predicate
-category `riding` and a human annotator finds an example of this predicate to provide to the agent. By changing the
+In classical active learning, an agent selects _examples_ that it is most uncertain about to be labeled.
+Conversely, we allow agents to ask for examples at the _category_ level instead of the example level. We train
+agents to predict attributes and relations in scenes. Our framing allows an agent to ask for an example of a rare
+category `eating` and an oracle provides an example of this predicate. By changing the
 question framing, we show that a simple method that asks for specific labels outperforms several active learning
 baselines.
 
@@ -130,9 +128,12 @@ checkpoint files.
 
 **Incremental Active Learners:**
 
-- [final_tail_experiments.sh](./bash_scripts/final_tail_experiments.sh)
-    - Trains our tail method in three settings: using re-balanced mini-batches, using standard mini-batches, and using
-      _count probabilities_ (see our paper for more details)
+- [final_tail_uniform_class_experiments.sh](./bash_scripts/final_tail_uniform_class_experiments.sh)
+    - Trains the main version of our tail method (with uniform probabilities) in two settings: using re-balanced
+      mini-batches and using standard mini-batches
+- [final_tail_frequency_class_experiments.sh](./bash_scripts/final_tail_frequency_class_experiments.sh)
+    - Trains the frequency probability version of our tail method in two settings: using re-balanced mini-batches and
+      using standard mini-batches
 - [final_al_method_experiments.sh](./bash_scripts/final_al_method_experiments.sh)
     - Trains four active learning methods: random, entropy, margin, and confidence in two settings: using re-balanced
       mini-batches and using standard mini-batches
@@ -194,10 +195,10 @@ Code: https://github.com/he-dhamo/simsg
 If using this code, please cite our paper.
 
 ```
-@article{Hayes_2021_Long_Tail_Incremental_Active_Learning
-    author = {Hayes, Tyler L. and Nickel, Maximilian and Kanan, Christopher and Denoyer, Ludovic and Szlam, Arthur},
-    title = {Can I see an Example? Active Learning the Long Tail of Attributes and Relations},
-    journal = {arXiv},
-    year = {2021}
+@inproceedings{Hayes_2022_Can_I_See_An_Example,
+  title={Can I see an Example? Active Learning the Long Tail of Attributes and Relations},
+  author={Hayes, Tyler L. and Nickel, Maximilian and Kanan, Christopher and Denoyer, Ludovic and Szlam, Arthur},
+  booktitle={British Machine Vision Conference (BMVC)},
+  year={2022}
 }
 ```

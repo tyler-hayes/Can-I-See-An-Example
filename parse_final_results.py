@@ -363,8 +363,8 @@ def get_all_results(save_dir, plots_dir, seeds, num_questions, permutations, tot
 
 
 def plot_rebalanced_mb_with_bias_correction(test_data, num_samples, head_samples):
-    methods = ['random', 'confidence', 'entropy', 'margin', 'tail_rank_equal_proba']
-    method_names = ['Random', 'Confidence', 'Entropy', 'Margin', 'Tail (Ours)']
+    methods = ['random', 'confidence', 'entropy', 'margin', 'tail_uniform_class_rank_equal_proba']
+    method_names = ['Random', 'Confidence', 'Entropy', 'Margin', 'QBCat-Tail (Ours)']
     plot_name = 'final_' + test_data + '_results_rebalanced_mb_%s'
 
     al_first_name = 'final_active_learning_head_pre_train_bal_qtype_method_%s_old_new_bias_correction_' + str(
@@ -376,8 +376,8 @@ def plot_rebalanced_mb_with_bias_correction(test_data, num_samples, head_samples
 
 
 def plot_rebalanced_mb_without_bias_correction(test_data, num_samples, head_samples):
-    methods = ['random', 'confidence', 'entropy', 'margin', 'tail_rank_equal_proba']
-    method_names = ['Random', 'Confidence', 'Entropy', 'Margin', 'Tail (Ours)']
+    methods = ['random', 'confidence', 'entropy', 'margin', 'tail_uniform_class_rank_equal_proba']
+    method_names = ['Random', 'Confidence', 'Entropy', 'Margin', 'QBCat-Tail (Ours)']
     plot_name = 'final_' + test_data + '_results_rebalanced_mb_without_bias_correction_%s'
 
     al_first_name = 'final_active_learning_head_pre_train_bal_qtype_method_%s_old_new_bias_correction_' + str(
@@ -389,8 +389,9 @@ def plot_rebalanced_mb_without_bias_correction(test_data, num_samples, head_samp
 
 
 def plot_al_tail_only(test_data, num_samples, head_samples):
-    methods = ['confidence_no_head', 'entropy_no_head', 'margin_no_head', 'tail_rank_equal_proba']
-    method_names = ['Confidence', 'Entropy', 'Margin', 'Tail (Ours)']
+    methods = ['tail_rank_equal_proba', 'confidence_no_head', 'entropy_no_head', 'margin_no_head',
+               'tail_uniform_class_rank_equal_proba']
+    method_names = ['Random', 'Confidence', 'Entropy', 'Margin', 'QBCat-Tail (Ours)']
     plot_name = 'final_' + test_data + '_results_rebalanced_mb_tail_only_%s'
 
     al_first_name = 'final_active_learning_head_pre_train_bal_qtype_method_%s_old_new_bias_correction_' + str(
@@ -402,8 +403,8 @@ def plot_al_tail_only(test_data, num_samples, head_samples):
 
 
 def plot_tail_method_comparisons(test_data, num_samples, head_samples):
-    methods = ['tail_rank', 'tail_rank_equal_proba']
-    method_names = ['Tail (Count Probabilities)', 'Tail (Full Setup)']
+    methods = ['tail_rank_equal_proba', 'tail_uniform_class_rank_equal_proba']
+    method_names = ['QBCat-Tail (Freq. Probabilities)', 'QBCat-Tail (Main Setup)']
     plot_name = 'final_' + test_data + '_results_rebalanced_mb_tail_comparison_%s'
 
     al_first_name = 'final_active_learning_head_pre_train_bal_qtype_method_%s_old_new_bias_correction_' + str(
@@ -415,8 +416,8 @@ def plot_tail_method_comparisons(test_data, num_samples, head_samples):
 
 
 def plot_standard_mb(test_data, num_samples, head_samples):
-    methods = ['random', 'confidence', 'entropy', 'margin', 'tail_rank_equal_proba']
-    method_names = ['Random', 'Confidence', 'Entropy', 'Margin', 'Tail (Ours)']
+    methods = ['random', 'confidence', 'entropy', 'margin', 'tail_uniform_class_rank_equal_proba']
+    method_names = ['Random', 'Confidence', 'Entropy', 'Margin', 'QBCat-Tail (Ours)']
     plot_name = 'final_' + test_data + '_results_standard_mb_%s'
 
     al_first_name = 'final_active_learning_head_pre_train_bal_qtype_method_%s_standard_mini_batch_' + str(
