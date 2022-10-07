@@ -1,6 +1,6 @@
 Can I see an Example? Active Learning the Long Tail of Attributes and Relations
 =====================================
-This is PyTorch code for our BMVC-2022 paper available on [arXiv](https://arxiv.org/abs/).
+This is PyTorch code for our BMVC-2022 paper available on [arXiv](https://arxiv.org/abs/2203.06215).
 
 **Abstract:** There has been significant progress in creating machine learning models that identify objects in scenes
 along with their associated attributes and relationships; however, there is a large gap between the best models and
@@ -88,7 +88,7 @@ generate the necessary files in the directory [setup_data](./setup_data) and des
   bounding box coordinates to h5 files. This step will create files: `vg_box_rn50_features_train.h5`
   , `vg_box_rn50_features_val.h5`, `vg_box_rn50_features_test.h5`, `vg_box_coordinates_train.h5`
   , `vg_box_coordinates_val.h5`, `vg_box_coordinates_test.h5`
-- Run [make_qtype_h5.py](./setup_data/make_qtype_h5.py) to save the question-based dataset and scene graphs to h5 files.
+- Run [make_qtype_h5_files.py](./setup_data/make_qtype_h5_files.py) to save the question-based dataset and scene graphs to h5 files.
   This step will create files: `vg_qtype_dset_train.h5`, `vg_qtype_dset_val.h5`, `vg_qtype_dset_test.h5`
   , `vg_scene_graphs_attributes1_train.h5`, `vg_scene_graphs_attributes1_val.h5`, `vg_scene_graphs_attributes1_test.h5`
   , `vg_scene_graphs_triples1_train.h5`, `vg_scene_graphs_triples1_val.h5`, `vg_scene_graphs_triples1_test.h5`
