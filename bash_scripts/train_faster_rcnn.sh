@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-PROJ_ROOT=/media/tyler/Data/codes/Continual-Active-Learn-Scene-Graphs
+PROJ_ROOT=/media/tyler/Data/codes/Can-I-See-An-Example
 export PYTHONPATH=${PROJ_ROOT}
 source activate long_tail_continual_active_learning
 cd ${PROJ_ROOT}/train_object_detection_feature_extractor
